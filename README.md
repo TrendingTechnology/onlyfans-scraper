@@ -136,3 +136,7 @@ Users
 ```
 
 Then the path you enter should be `/Users/home/.sites/OnlyFans/melodyjai/Metadata`. The program will detect the .db files in the directory and then ask you for the username to whom those .db files belong. The program will then move the relevant data over.
+
+## Bugs/Issues
+
+If you run into any trouble while using this script, or if you're confused on how to get something running, feel free to [open an issue](https://github.com/Amenly/onlyfans-scraper/issues/new) or [open a discussion](https://github.com/Amenly/onlyfans-scraper/discussions/new). I don't bite :D
