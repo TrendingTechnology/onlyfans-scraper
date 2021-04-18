@@ -33,35 +33,36 @@ async def process_urls(headers, username, model_id, urls):
         path = pathlib.Path.cwd() / username
         path.mkdir(exist_ok=True)
 
-        aws = [asyncio.create_task(
-            download(headers, path, model_id, *url)) for url in separated_urls]
-        with tqdm(desc='Files downloaded', total=len(aws), colour='cyan', leave=True) as bar:
-            for coro in asyncio.as_completed(aws):
-                await coro
-                bar.update()
+        # Added pool limit:
+        limits = httpx.Limits(max_connections=10, max_keepalive_connections=5)
+        async with httpx.AsyncClient(headers=headers, limits=limits) as c:
+            aws = [asyncio.create_task(
+                download(c, path, model_id, *url)) for url in separated_urls]
+
+            with tqdm(desc='Files downloaded', total=len(aws), colour='cyan', leave=True) as bar:
+                for coro in asyncio.as_completed(aws):
+                    await coro
+                    bar.update()
 
 
-async def download(headers, path, model_id, url, date=None, id_=None):
+async def download(client, path, model_id, url, date=None, id_=None):
     filename = url.split('?', 1)[0].rsplit('/', 1)[-1]
     path_to_file = path / filename
 
-    limits = httpx.Limits(max_connections=10, max_keepalive_connections=5)
-    async with httpx.AsyncClient(http2=True, headers=headers, limits=limits) as c:
-        async with c.stream('GET', url) as r:
+    async with client.stream('GET', url) as r:
+        if not r.is_error:
+            total = int(r.headers['Content-Length'])
+            with tqdm(desc=filename, total=total, unit_scale=True, unit_divisor=1024, unit='B', leave=False) as bar:
+                num_bytes_downloaded = r.num_bytes_downloaded
+                with open(path_to_file, 'wb') as f:
+                    async for chunk in r.aiter_bytes(chunk_size=1024):
+                        f.write(chunk)
+                        bar.update(
+                            r.num_bytes_downloaded - num_bytes_downloaded)
+                        num_bytes_downloaded = r.num_bytes_downloaded
 
-            if not r.is_error:
-                total = int(r.headers['Content-Length'])
-                with tqdm(desc=filename, total=total, unit_scale=True, unit_divisor=1024, unit='B', leave=False) as bar:
-                    num_bytes_downloaded = r.num_bytes_downloaded
-                    with open(path_to_file, 'wb') as f:
-                        async for chunk in r.aiter_bytes(chunk_size=1024):
-                            f.write(chunk)
-                            bar.update(
-                                r.num_bytes_downloaded - num_bytes_downloaded)
-                            num_bytes_downloaded = r.num_bytes_downloaded
-
-            else:
-                r.raise_for_status()
+        else:
+            r.raise_for_status()
 
     if path_to_file.is_file():
         if date:
