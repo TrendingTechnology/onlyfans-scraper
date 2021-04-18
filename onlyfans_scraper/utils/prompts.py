@@ -56,6 +56,39 @@ def username_prompt() -> str:
     return answer['username']
 
 
+def areas_prompt():
+    questions = [
+        {
+            'type': 'checkbox',
+            'qmark': '[?]',
+            'name': 'areas',
+            'message': 'Which area(s) would you like to scrape? (Press ENTER to continue)',
+            'choices': [
+                {
+                    'name': 'All',
+                    'checked': True
+                },
+                {
+                    'name': 'Timeline'
+                },
+                {
+                    'name': 'Messages'
+                },
+                {
+                    'name': 'Highlights',
+                }
+            ]
+        }
+    ]
+
+    while True:
+        answers = prompt(questions)
+        if not answers['areas']:
+            print('Error: You must select at least one.')
+        break
+    return answers['areas']
+
+
 def database_prompt() -> tuple:
     questions = [
         {
