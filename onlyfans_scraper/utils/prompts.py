@@ -29,18 +29,32 @@ def main_prompt() -> int:
     return mainPromptChoices[answer['action']]
 
 
-def username_or_list_prompt() -> bool:
+def username_or_list_prompt() -> int:
     questions = [
         {
             'type': 'list',
             'name': 'username_or_list',
-            'message': 'Would you like a list of your subscriptions printed or would you like to enter a username?',
+            'message': 'Choose one of the following options:',
             'choices': [*usernameOrListChoices]
         }
     ]
 
     answer = prompt(questions)
     return usernameOrListChoices[answer['username_or_list']]
+
+
+def verify_all_users_username_or_list_prompt() -> bool:
+    questions = [
+        {
+            'type': 'confirm',
+            'name': 'all_users',
+            'message': 'Are you sure you want to scrape every model that you\'re subscribed to?',
+            'default': False
+        }
+    ]
+
+    answer = prompt(questions)
+    return answer['all_users']
 
 
 def username_prompt() -> str:
@@ -56,7 +70,7 @@ def username_prompt() -> str:
     return answer['username']
 
 
-def areas_prompt():
+def areas_prompt() -> list:
     questions = [
         {
             'type': 'checkbox',
@@ -72,10 +86,13 @@ def areas_prompt():
                     'name': 'Timeline'
                 },
                 {
-                    'name': 'Messages'
+                    'name': 'Archived'
                 },
                 {
-                    'name': 'Highlights',
+                    'name': 'Highlights'
+                },
+                {
+                    'name': 'Messages'
                 }
             ]
         }
