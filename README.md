@@ -84,26 +84,34 @@ Inside of the `Cookie` field, you will see a couple of important bits:
 * `auth_id=`
 * `auth_uid_=`
 
-You need everything ***after*** the equal sign and everything ***before*** the semi-colon for all of those bits. 
+*Your* `auth_uid_` *will *only* appear **if you have 2FA (two-factor authentication) enabled**. Also, keep in mind that your* `auth_uid_` *will have numbers after the final underscore and before the equal sign (that's your auth_id).*
 
-On a side note, your `auth_uid_` will *only* appear **if you have 2FA (two-factor authentication) enabled**. Also, keep in mind that your `auth_uid_` have numbers after the final underscore and before the equal sign (that's your auth_id). 
+You need everything ***after*** the equal sign and everything ***before*** the semi-colon for all of those bits. 
 
 Once you've copied the value for your `sess` cookie, go back to the program, paste it in, and hit enter. Now go back to your browser, copy the `auth_id` value, and paste it into the program and hit enter. Then go back to your browser, copy the `auth_uid_` value, and paste it into the program and hit enter (**leave this blank if you don't use 2FA!!!**).
 
-Once you do that, the program will ask for your user agent. You should be able to find your user agent ina field called `User-Agent` below the `Cookie` field. Copy it and paste it into the program and hit enter.
+Once you do that, the program will ask for your user agent. You should be able to find your user agent in a field called `User-Agent` below the `Cookie` field. Copy it and paste it into the program and hit enter.
 
-You're all set and you can now use it!
+You're all set and you can now use `onlyfans-scraper`.
 
 
 ## Usage
 
-Whenever you want to run the program, all you need to do is type `onlyfans-scraper` in your terminal. Once the program launches, all you need to do is follow the on-screen directions.
+Whenever you want to run the program, all you need to do is type `onlyfans-scraper` in your terminal:
+
+```
+onlyfans-scraper
+```
+
+That's it. It's that simple.
+
+ Once the program launches, all you need to do is follow the on-screen directions. The first time you run it, it will ask you to fill out your `auth.json` file (directions for that in the section above). 
 
 You will need to use your arrow keys to select an option:
 
 <img src="https://raw.githubusercontent.com/Amenly/onlyfans-scraper/main/media/main_menu.png" width="450">
 
-If you choose to download content, you will have the option of either having a list of your current subscriptions printed or manually entering a username:
+If you choose to download content, you will have three options: having a list of all of your subscriptions printed, manually entering a username, or scraping *all* accounts that you're subscribed to.
 
 <img src="https://raw.githubusercontent.com/Amenly/onlyfans-scraper/main/media/list_or_username.png">
 
@@ -137,6 +145,8 @@ Users
 
 Then the path you enter should be `/Users/home/.sites/OnlyFans/melodyjai/Metadata`. The program will detect the .db files in the directory and then ask you for the username to whom those .db files belong. The program will then move the relevant data over.
 
-## Bugs/Issues
+## Bugs/Issues/Suggestions
 
 If you run into any trouble while using this script, or if you're confused on how to get something running, feel free to [open an issue](https://github.com/Amenly/onlyfans-scraper/issues/new) or [open a discussion](https://github.com/Amenly/onlyfans-scraper/discussions/new). I don't bite :D
+
+If you would like a feature added to the program or have some ideas, [start a discussion](https://github.com/Amenly/onlyfans-scraper/discussions/new)!
