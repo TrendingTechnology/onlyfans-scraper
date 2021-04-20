@@ -78,20 +78,67 @@ def process_profile(headers, username) -> list:
     return urls
 
 
-def do_download_content(headers, username, model_id):
-    profile_urls = process_profile(headers, username)
-    pinned_posts_urls = process_pinned_posts(headers, model_id)
-    timeline_posts_urls = process_timeline_posts(headers, model_id)
-    archived_posts_urls = process_archived_posts(headers, model_id)
-    highlights_urls = process_highlights(headers, model_id)
-    messages_urls = process_messages(headers, model_id)
+def process_areas(headers, username, model_id) -> list:
+    profile_urls = []
+    pinned_posts_urls = []
+    timeline_posts_urls = []
+    archived_posts_urls = []
+    highlights_urls = []
+    messages_urls = []
+
+    result_areas_prompt = prompts.areas_prompt()
+
+    if 'All' in result_areas_prompt:
+        profile_urls = process_profile(headers, username)
+        pinned_posts_urls = process_pinned_posts(headers, model_id)
+        timeline_posts_urls = process_timeline_posts(headers, model_id)
+        archived_posts_urls = process_archived_posts(headers, model_id)
+        highlights_urls = process_highlights(headers, model_id)
+        messages_urls = process_messages(headers, model_id)
+
+    else:
+        if 'Timeline' in result_areas_prompt:
+            profile_urls = process_profile(headers, username)
+            pinned_posts_urls = process_pinned_posts(headers, model_id)
+            timeline_posts_urls = process_timeline_posts(headers, model_id)
+
+        if 'Archived' in result_areas_prompt:
+            archived_posts_urls = process_archived_posts(headers, model_id)
+
+        if 'Highlights' in result_areas_prompt:
+            highlights_urls = process_highlights(headers, model_id)
+
+        if 'Messages' in result_areas_prompt:
+            messages_urls = process_messages(headers, model_id)
+
+    combined_urls = profile_urls + pinned_posts_urls + timeline_posts_urls + \
+        archived_posts_urls + highlights_urls + messages_urls
+
+    return combined_urls
+
+
+def do_download_content(headers, username, model_id, ignore_prompt=False):
+    # If we shouldn't ignore the areas prompt:
+    if not ignore_prompt:
+        combined_urls = process_areas(headers, username, model_id)
+
+    # If we should ignore the areas prompt:
+    else:
+        profile_urls = process_profile(headers, username)
+        pinned_posts_urls = process_pinned_posts(headers, model_id)
+        timeline_posts_urls = process_timeline_posts(headers, model_id)
+        archived_posts_urls = process_archived_posts(headers, model_id)
+        highlights_urls = process_highlights(headers, model_id)
+        messages_urls = process_messages(headers, model_id)
+
+        combined_urls = profile_urls + pinned_posts_urls + timeline_posts_urls + \
+            archived_posts_urls + highlights_urls + messages_urls
 
     asyncio.run(download.process_urls(
         headers,
         username,
         model_id,
-        profile_urls + pinned_posts_urls + timeline_posts_urls
-        + archived_posts_urls + highlights_urls + messages_urls))
+        combined_urls))
 
 
 def do_database_migration(path, model_id):
@@ -99,17 +146,16 @@ def do_database_migration(path, model_id):
     operations.write_from_foreign_database(results, model_id)
 
 
-def get_model(headers, subscribe_count) -> tuple:
-    """
-    Gets user's subscriptions and then prints them to the console. Accepts input
-    from user corresponding to the model whose content they would like to scrape.
-    """
+def get_usernames(parsed_subscriptions: list) -> list:
+    usernames = [sub[0] for sub in parsed_subscriptions]
+    return usernames
 
-    with Revolution(desc='Getting your subscriptions (this may take awhile)...') as _:
-        list_subscriptions = asyncio.run(
-            subscriptions.get_subscriptions(headers, subscribe_count))
-        parsed_subscriptions = subscriptions.parse_subscriptions(
-            list_subscriptions)
+
+def get_model(parsed_subscriptions: list) -> tuple:
+    """
+    Prints user's subscriptions to console and accepts input from user corresponding 
+    to the model whose content they would like to scrape.
+    """
     subscriptions.print_subscriptions(parsed_subscriptions)
 
     print('\nEnter the number next to the user whose content you would like to download:')
@@ -121,6 +167,18 @@ def get_model(headers, subscribe_count) -> tuple:
             print("Incorrect value. Please enter an actual number.")
         except IndexError:
             print("Value out of range. Please pick a number that's in range")
+
+
+def get_models(headers, subscribe_count) -> list:
+    """
+    Get user's subscriptions in form of a list.
+    """
+    with Revolution(desc='Getting your subscriptions (this may take awhile)...') as _:
+        list_subscriptions = asyncio.run(
+            subscriptions.get_subscriptions(headers, subscribe_count))
+        parsed_subscriptions = subscriptions.parse_subscriptions(
+            list_subscriptions)
+    return parsed_subscriptions
 
 
 def process_me(headers):
@@ -143,24 +201,42 @@ def main():
         pass
 
     headers = auth.make_headers(auth.read_auth())
+    result_main_prompt = prompts.main_prompt()
 
-    main_prompt_result = prompts.main_prompt()
-
-    if not main_prompt_result:
+    if result_main_prompt == 0:
         # Download content from user
-        username_or_list_prompt_result = prompts.username_or_list_prompt()
+        result_username_or_list_prompt = prompts.username_or_list_prompt()
 
-        if username_or_list_prompt_result:
+        # Print a list of users:
+        if result_username_or_list_prompt == 0:
             subscribe_count = process_me(headers)
-            username, model_id, *_ = get_model(headers, subscribe_count)
+            parsed_subscriptions = get_models(headers, subscribe_count)
+            username, model_id, *_ = get_model(parsed_subscriptions)
 
-        else:
+            do_download_content(headers, username, model_id)
+
+        # Ask for a username to be entered:
+        elif result_username_or_list_prompt == 1:
             username = prompts.username_prompt()
             model_id = profile.get_id(headers, username)
 
-        do_download_content(headers, username, model_id)
+            do_download_content(headers, username, model_id)
 
-    elif main_prompt_result == 1:
+        else:
+            # Ask if we should scrape all users
+            result_verify_all_users = prompts.verify_all_users_username_or_list_prompt()
+            # If we should, then:
+            if result_verify_all_users:
+                subscribe_count = process_me(headers)
+                parsed_subscriptions = get_models(headers, subscribe_count)
+                usernames = get_usernames(parsed_subscriptions)
+
+                for username in usernames:
+                    model_id = profile.get_id(headers, username)
+                    do_download_content(
+                        headers, username, model_id, ignore_prompt=True)
+
+    elif result_main_prompt == 1:
         # Like a user's posts
         username = prompts.username_prompt()
         model_id = profile.get_id(headers, username)
@@ -170,7 +246,7 @@ def main():
         post_ids = like.get_post_ids(unfavorited_posts)
         like.like(headers, model_id, username, post_ids)
 
-    elif main_prompt_result == 2:
+    elif result_main_prompt == 2:
         # Unlike a user's posts
         username = prompts.username_prompt()
         model_id = profile.get_id(headers, username)
@@ -180,11 +256,15 @@ def main():
         post_ids = like.get_post_ids(favorited_posts)
         like.unlike(headers, model_id, username, post_ids)
 
-    elif main_prompt_result == 3:
+    elif result_main_prompt == 3:
         # Migrate from old database
         path, username = prompts.database_prompt()
         model_id = profile.get_id(headers, username)
         do_database_migration(path, model_id)
+
+    elif result_main_prompt == 4:
+        # Edit `auth.json` file
+        auth.edit_auth()
 
 
 if __name__ == '__main__':
